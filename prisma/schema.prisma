@@ -1,0 +1,187 @@
+// LedgerLite database schema.
+// Docs: https://pris.ly/d/prisma-schema
+//
+// Conventions:
+// - Every business table has a `userId` so every query can be scoped to the
+//   logged-in user (feature 1: "each user sees only their own data").
+// - Money is stored as Decimal(12, 2) in rupees. Never use Float for money.
+// - Table names are snake_case plurals via @@map so raw SQL / psql reads naturally.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ───────────────────────────── Enums ─────────────────────────────
+
+enum PaymentMode {
+  CASH
+  UPI
+  CARD
+}
+
+enum ReceiptStatus {
+  UPLOADED // image stored, AI not run yet
+  EXTRACTED // AI returned JSON that passed Zod validation
+  FAILED // AI call failed or JSON was invalid; user can still type values manually
+  CONFIRMED // user reviewed the form and an Expense was saved
+}
+
+// ──────────────────────── Auth.js (Phase 2) ───────────────────────
+// User, Account, Session and VerificationToken follow the shape that
+// @auth/prisma-adapter expects, so Phase 2 needs no schema rewrite.
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts   Account[]
+  sessions   Session[]
+  categories Category[]
+  expenses   Expense[]
+  budgets    Budget[]
+  receipts   Receipt[]
+
+  @@map("users")
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ─────────────────────────── Domain ───────────────────────────
+
+// Categories are per-user (seeded with defaults on sign-up) so a shop owner
+// can rename or add their own, e.g. "Stock purchase", "Shop rent".
+model Category {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  createdAt DateTime @default(now())
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expenses Expense[]
+  budget   Budget?
+
+  @@unique([userId, name])
+  // Target for the composite foreign keys below: lets Postgres itself guarantee
+  // an expense/budget can only point at a category owned by the same user.
+  @@unique([id, userId])
+  @@map("categories")
+}
+
+model Expense {
+  id          String      @id @default(cuid())
+  userId      String
+  categoryId  String
+  receiptId   String?     @unique // at most one expense per receipt
+  amount      Decimal     @db.Decimal(12, 2) // total paid, GST included
+  gstAmount   Decimal     @default(0) @db.Decimal(12, 2)
+  date        DateTime    @db.Date // calendar date of purchase, no time/zone
+  vendor      String
+  paymentMode PaymentMode
+  notes       String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Restrict: deleting a category that still has expenses must fail loudly
+  // instead of silently wiping financial records.
+  category Category @relation(fields: [categoryId, userId], references: [id, userId], onDelete: Restrict)
+  receipt  Receipt? @relation(fields: [receiptId], references: [id], onDelete: SetNull)
+
+  // Matches the main access patterns: list by date, dashboard by category/month,
+  // top vendors. userId comes first because every query filters on it.
+  @@index([userId, date(sort: Desc)])
+  @@index([userId, categoryId, date])
+  @@index([userId, vendor])
+  @@map("expenses")
+}
+
+// One standing monthly limit per category (e.g. "Electricity: ₹3,000/month").
+model Budget {
+  id           String   @id @default(cuid())
+  userId       String
+  categoryId   String
+  monthlyLimit Decimal  @db.Decimal(12, 2)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId, userId], references: [id, userId], onDelete: Cascade)
+
+  // One budget per category. (categoryId alone would be enough, but Prisma needs
+  // the relation's own fields to be unique for a one-to-one.)
+  @@unique([categoryId, userId])
+  @@index([userId])
+  @@map("budgets")
+}
+
+model Receipt {
+  id            String        @id @default(cuid())
+  userId        String
+  blobUrl       String // Vercel Blob URL
+  blobPathname  String // needed to delete the blob later
+  mimeType      String
+  sizeBytes     Int
+  status        ReceiptStatus @default(UPLOADED)
+  // Raw AI output after Zod validation (vendor, date, line items, GST...).
+  // JSON because its shape belongs to the AI contract, not to our relational model.
+  extractedData Json?
+  errorMessage  String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expense Expense?
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("receipts")
+}
