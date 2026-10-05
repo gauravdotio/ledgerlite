@@ -7,6 +7,15 @@ export default function AuthLayout({ children }: LayoutProps<"/">) {
         LedgerLite
       </Link>
       <div className="w-full max-w-sm">{children}</div>
+      <p className="mt-6 text-xs text-foreground/50">
+        <Link href="/privacy" className="hover:underline">
+          Privacy
+        </Link>
+        {" · "}
+        <Link href="/terms" className="hover:underline">
+          Terms
+        </Link>
+      </p>
     </main>
   );
 }

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ButtonLink } from "@/components/ui/button";
 import { getCurrentUser } from "@/server/auth/session";
@@ -36,6 +37,15 @@ export default async function HomePage() {
           </li>
         ))}
       </ul>
+      <p className="text-xs text-foreground/50">
+        <Link href="/privacy" className="hover:underline">
+          Privacy
+        </Link>
+        {" · "}
+        <Link href="/terms" className="hover:underline">
+          Terms
+        </Link>
+      </p>
     </main>
   );
 }

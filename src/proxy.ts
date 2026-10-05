@@ -4,7 +4,7 @@ import { auth } from "@/auth";
 // Optimistic check only: redirects signed-out visitors before the page renders.
 // The authoritative check is requireUserId() in every page and action, because
 // proxy can be skipped (e.g. a matcher mistake) and must never be the only guard.
-const PUBLIC_PATHS = ["/", "/login", "/signup"];
+const PUBLIC_PATHS = ["/", "/login", "/signup", "/privacy", "/terms"];
 const AUTH_PAGES = ["/login", "/signup"];
 
 export default auth((req) => {
