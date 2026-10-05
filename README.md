@@ -90,6 +90,7 @@ If startup fails with "postmaster became multithreaded", prefix the command with
 | `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | no | Shows "Continue with Google" when both are set |
 | `GOOGLE_GENERATIVE_AI_API_KEY` | no | Free key from Google AI Studio. Turns on receipt reading and Ask |
 | `AI_MODEL` | no | Gemini model id (default `gemini-flash-latest`) |
+| `AI_FALLBACK_MODEL` | no | Tried when the main model is overloaded or rate-limited (default `gemini-flash-lite-latest`; `none` to disable) |
 | `BLOB_READ_WRITE_TOKEN` | on Vercel | Private Vercel Blob store for receipt images |
 
 All of these are checked with Zod when the server starts ([`src/lib/env.ts`](src/lib/env.ts)), so a typo fails loudly at boot instead of mid-request.

@@ -96,6 +96,9 @@ export default async function ReceiptPage({ params }: PageProps<"/receipts/[id]"
                 </details>
               ) : null}
               <ExpenseForm
+                // Remount when the receipt is re-read, so the fields pick up
+                // the new values (React keeps the old ones on a mounted form).
+                key={receipt.updatedAt.toISOString()}
                 action={confirmReceiptAction.bind(null, receipt.id)}
                 categories={categories}
                 defaults={defaults}

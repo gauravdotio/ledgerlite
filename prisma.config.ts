@@ -12,7 +12,9 @@ export default defineConfig({
   datasource: {
     // Migrations need a direct (non-pooled) connection: Neon's PgBouncer pooler
     // in transaction mode does not support the session features migrate uses.
-    // Falls back to DATABASE_URL for local Postgres where there is no pooler.
-    url: process.env["DIRECT_URL"] ?? process.env["DATABASE_URL"],
+    // DIRECT_URL is our name for it; DATABASE_URL_UNPOOLED is the name Vercel's
+    // Neon integration creates. Falls back to DATABASE_URL for local Postgres,
+    // where there is no pooler.
+    url: process.env["DIRECT_URL"] ?? process.env["DATABASE_URL_UNPOOLED"] ?? process.env["DATABASE_URL"],
   },
 });

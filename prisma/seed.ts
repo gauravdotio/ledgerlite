@@ -18,7 +18,8 @@ import { hashPassword } from "../src/lib/password";
 export const DEMO_EMAIL = "demo@ledgerlite.dev";
 export const DEMO_PASSWORD = "demo-ledger-2026";
 
-const connectionString = process.env["DIRECT_URL"] ?? process.env["DATABASE_URL"];
+const connectionString =
+  process.env["DIRECT_URL"] ?? process.env["DATABASE_URL_UNPOOLED"] ?? process.env["DATABASE_URL"];
 if (!connectionString) {
   throw new Error("DATABASE_URL is not set. Copy .env.example to .env first.");
 }

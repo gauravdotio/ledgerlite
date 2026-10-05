@@ -6,7 +6,8 @@ import { scriptedModel, textResponse, toolCallResponse } from "../helpers/mock-m
 const hasDb = Boolean(process.env["DATABASE_URL"]) && !process.env["DATABASE_URL"]!.includes("test:test@");
 
 let model: MockLanguageModelV4 | null = null;
-vi.mock("@/server/ai/model", () => ({ getModel: () => model }));
+const fallback: MockLanguageModelV4 | null = null; // the tool-loop test only needs one model
+vi.mock("@/server/ai/model", () => ({ getModel: () => model, getFallbackModel: () => fallback }));
 
 describe.skipIf(!hasDb)("AI spending tools (database)", async () => {
   const { db } = await import("@/lib/db");

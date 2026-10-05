@@ -22,6 +22,9 @@ const envSchema = z.object({
   // upload and the user types the details in by hand.
   GOOGLE_GENERATIVE_AI_API_KEY: optional,
   AI_MODEL: z.string().default("gemini-flash-latest"),
+  // Tried when the main model is overloaded or rate-limited (common on the
+  // free tier). Set to "none" to disable.
+  AI_FALLBACK_MODEL: z.string().default("gemini-flash-lite-latest"),
   // Vercel Blob. Without it, receipts are saved to ./.local/uploads (dev only).
   BLOB_READ_WRITE_TOKEN: optional,
 });
